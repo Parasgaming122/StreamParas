@@ -57,7 +57,7 @@ interface TmdbService {
         @Header("Authorization") authHeader: String,
         @Path("id") id: Int,
         @Query("language") lang: String,
-        @Query("append_to_response") appendToResponse: String = "videos"
+        @Query("append_to_response") appendToResponse: String = "videos,credits,reviews"
     ): MovieDetail
 
     @GET("tv/{id}")
@@ -65,7 +65,7 @@ interface TmdbService {
         @Header("Authorization") authHeader: String,
         @Path("id") id: Int,
         @Query("language") lang: String,
-        @Query("append_to_response") appendToResponse: String = "videos"
+        @Query("append_to_response") appendToResponse: String = "videos,credits,reviews"
     ): TvDetail
 
     @GET("tv/{id}/season/{season}")

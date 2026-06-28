@@ -38,9 +38,12 @@ import kotlinx.coroutines.launch
 import com.example.data.api.AniListApi
 import com.example.data.api.PlayerSources
 import com.example.data.api.TmdbApi
-import com.example.data.model.TvEpisode
+import com.example.data.model.*
 import com.example.ui.navigation.Routes
 import com.example.ui.phone.DetailViewModel
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun TvDetailScreen(
@@ -272,6 +275,63 @@ fun TvDetailScreen(
                     }
                 }
 
+                // Unreleased warning banner
+                val releaseDate = when (detail) {
+                    is MovieDetail -> (detail as MovieDetail).releaseDate
+                    is TvDetail -> (detail as TvDetail).firstAirDate
+                    else -> null
+                }
+                val isNotYetReleased = releaseDate?.let { dateStr ->
+                    if (dateStr.isEmpty()) false else {
+                        try {
+                            val now = System.currentTimeMillis()
+                            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                            val date = sdf.parse(dateStr)
+                            date != null && date.time > now
+                        } catch (e: Exception) {
+                            false
+                        }
+                    }
+                } ?: false
+
+                if (isNotYetReleased) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp)
+                                .offset(y = (-8).dp)
+                                .background(Color(0xFFE50914).copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                                .border(1.dp, Color(0xFFE50914).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                .padding(16.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = "Unreleased",
+                                    tint = Color(0xFFE50914),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Not Yet Released",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "This content has not been officially released yet. Streaming links may be unavailable or invalid.",
+                                        color = Color(0xFFCCCCCC),
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // 4. Overview
                 item {
                     Column(
@@ -316,6 +376,62 @@ fun TvDetailScreen(
 
                 // 6. Episodes (Series only)
                 if ((mediaType == "tv" || mediaType == "anilist") && episodes.isNotEmpty()) {
+                    if (mediaType == "tv" && detail is TvDetail && (detail as TvDetail).seasons.isNotEmpty()) {
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Text(
+                                    "Seasons",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                                )
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 24.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    items((detail as TvDetail).seasons.filter { it.seasonNumber > 0 || it.episodeCount > 0 }) { season ->
+                                        var chipFocused by remember { mutableStateOf(false) }
+                                        val isSelected = viewModel.selectedSeason == season.seasonNumber
+                                        val chipBg = when {
+                                            chipFocused -> Color.White
+                                            isSelected -> Color(0xFFE50914)
+                                            else -> Color(0xFF222222)
+                                        }
+                                        val chipTextColor = when {
+                                            chipFocused -> Color.Black
+                                            else -> Color.White
+                                        }
+                                        
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(chipBg)
+                                                .onFocusChanged { chipFocused = it.hasFocus }
+                                                .focusable()
+                                                .clickable {
+                                                    viewModel.selectSeason(mediaId, season.seasonNumber)
+                                                }
+                                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                        ) {
+                                            Text(
+                                                text = season.name.ifEmpty { "Season ${season.seasonNumber}" },
+                                                color = chipTextColor,
+                                                fontSize = 14.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     item {
                         Text(
                             "Episodes",
@@ -363,6 +479,204 @@ fun TvDetailScreen(
                                 }
                             }
                         )
+                    }
+                }
+
+                // Cast (Credits) Section
+                val castList = when (detail) {
+                    is MovieDetail -> (detail as MovieDetail).credits?.cast
+                    is TvDetail -> (detail as TvDetail).credits?.cast
+                    else -> null
+                }?.take(12)
+
+                if (!castList.isNullOrEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp)
+                        ) {
+                            Text(
+                                "Cast & Crew",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                            )
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 24.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(castList) { cast ->
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.width(90.dp)
+                                    ) {
+                                        AsyncImage(
+                                            model = TmdbApi.imgUrl(cast.profilePath, "w185"),
+                                            contentDescription = cast.name,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(80.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF222222))
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = cast.name,
+                                            fontSize = 12.sp,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        Text(
+                                            text = cast.character,
+                                            fontSize = 10.sp,
+                                            color = Color(0xFF999999),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Reviews Section
+                val reviewsList = when (detail) {
+                    is MovieDetail -> (detail as MovieDetail).reviews?.results
+                    is TvDetail -> (detail as TvDetail).reviews?.results
+                    else -> null
+                }?.take(3)
+
+                if (!reviewsList.isNullOrEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                "User Reviews",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                            reviewsList.forEach { review ->
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp)
+                                        .background(Color(0xFF1E1E1E), RoundedCornerShape(8.dp))
+                                        .border(1.dp, Color(0xFF333333), RoundedCornerShape(8.dp))
+                                        .padding(12.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .background(Color(0xFFE50914).copy(alpha = 0.2f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = review.author.take(1).uppercase(),
+                                                color = Color(0xFFE50914),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                        }
+                                        Text(
+                                            text = review.author,
+                                            fontSize = 14.sp,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = review.content,
+                                        fontSize = 13.sp,
+                                        color = Color(0xFFCCCCCC),
+                                        maxLines = 4,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Recommendations Section
+                val recs = viewModel.recommendations
+                if (recs.isNotEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp)
+                        ) {
+                            Text(
+                                "More Like This",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                            )
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 24.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(recs) { item ->
+                                    var recFocused by remember { mutableStateOf(false) }
+                                    val borderStroke = if (recFocused) 2.dp else 0.dp
+                                    val borderColor = if (recFocused) Color(0xFFE50914) else Color.Transparent
+
+                                    Column(
+                                        modifier = Modifier
+                                            .width(130.dp)
+                                            .onFocusChanged { recFocused = it.hasFocus }
+                                            .focusable()
+                                            .clickable {
+                                                navController.navigate(Routes.detail(item.id, item.mediaType))
+                                            }
+                                            .padding(4.dp)
+                                    ) {
+                                        AsyncImage(
+                                            model = TmdbApi.imgUrl(item.posterPath, "w342"),
+                                            contentDescription = item.displayTitle,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(120.dp, 180.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(Color(0xFF222222))
+                                                .border(borderStroke, borderColor, RoundedCornerShape(8.dp))
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = item.displayTitle,
+                                            fontSize = 13.sp,
+                                            color = if (recFocused) Color(0xFFE50914) else Color.White,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 

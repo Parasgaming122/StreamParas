@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.*
@@ -29,6 +31,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,6 +66,22 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
         private set
     var isLoading by mutableStateOf(true)
         private set
+    var recommendations by mutableStateOf<List<MediaItem>>(emptyList())
+        private set
+    var selectedSeason by mutableStateOf<Int>(1)
+        private set
+
+    fun selectSeason(showId: Int, seasonNumber: Int) {
+        viewModelScope.launch {
+            try {
+                selectedSeason = seasonNumber
+                val seasonDetail = MediaRepository.getTvSeasonDetail(showId, seasonNumber)
+                episodes = seasonDetail.episodes
+            } catch (e: Exception) {
+                Log.e("DetailViewModel", "Failed to load season $seasonNumber", e)
+            }
+        }
+    }
 
     fun load(mediaId: Int, mediaType: String) {
         viewModelScope.launch {
@@ -100,6 +119,24 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
                                 showId = animeData.id
                             )
                         }
+                        
+                        recommendations = animeData.relations?.edges?.mapNotNull { edge ->
+                            edge.node?.let { m ->
+                                MediaItem(
+                                    id = m.id,
+                                    title = m.title?.english ?: m.title?.romaji ?: m.title?.native ?: "Anime",
+                                    name = m.title?.english ?: m.title?.romaji ?: m.title?.native ?: "Anime",
+                                    posterPath = m.coverImage?.large ?: m.coverImage?.medium ?: m.coverImage?.extraLarge,
+                                    backdropPath = m.bannerImage,
+                                    overview = AniListApi.cleanDescription(m.description),
+                                    releaseDate = "${m.seasonYear ?: ""}-01-01",
+                                    firstAirDate = "${m.seasonYear ?: ""}-01-01",
+                                    voteAverage = (m.averageScore / 10f),
+                                    mediaType = "anilist",
+                                    year = m.seasonYear?.toString() ?: ""
+                                )
+                            }
+                        } ?: emptyList()
                     }
                 } else if (mediaType == "tv") {
                     val tvDetails = MediaRepository.getTvDetail(mediaId)
@@ -110,6 +147,7 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
 
                     // Fetch first season episodes (typically season 1)
                     val sNumber = tvDetails.seasons.firstOrNull { it.seasonNumber > 0 }?.seasonNumber ?: 1
+                    selectedSeason = sNumber
                     val seasonDetail = MediaRepository.getTvSeasonDetail(mediaId, sNumber)
                     episodes = seasonDetail.episodes
 
@@ -122,6 +160,16 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
                     if (isAnime) {
                         val animeData = AniListApi.fetchAnilistData(tvDetails.name, "tv")
                         anilistData = animeData
+                    }
+                    
+                    recommendations = try {
+                        TmdbApi.getTvRecommendations(mediaId).take(10)
+                    } catch (e: Exception) {
+                        try {
+                            TmdbApi.getTvSimilar(mediaId).take(10)
+                        } catch (e2: Exception) {
+                            emptyList()
+                        }
                     }
                 } else {
                     val movieDetails = MediaRepository.getMovieDetail(mediaId)
@@ -139,6 +187,16 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
                     if (isAnime) {
                         val animeData = AniListApi.fetchAnilistData(movieDetails.title, "movie")
                         anilistData = animeData
+                    }
+                    
+                    recommendations = try {
+                        TmdbApi.getMovieRecommendations(mediaId).take(10)
+                    } catch (e: Exception) {
+                        try {
+                            TmdbApi.getMovieSimilar(mediaId).take(10)
+                        } catch (e2: Exception) {
+                            emptyList()
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -444,6 +502,63 @@ fun DetailScreen(
                     }
                 }
 
+                // Unreleased Notification Banner
+                val releaseDate = when (detail) {
+                    is MovieDetail -> (detail as MovieDetail).releaseDate
+                    is TvDetail -> (detail as TvDetail).firstAirDate
+                    else -> null
+                }
+                val isNotYetReleased = releaseDate?.let { dateStr ->
+                    if (dateStr.isEmpty()) false else {
+                        try {
+                            val now = System.currentTimeMillis()
+                            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                            val date = sdf.parse(dateStr)
+                            date != null && date.time > now
+                        } catch (e: Exception) {
+                            false
+                        }
+                    }
+                } ?: false
+
+                if (isNotYetReleased) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .offset(y = (-20).dp)
+                                .background(colors.accent.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                .border(1.dp, colors.accent.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                                .padding(16.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = "Unreleased",
+                                    tint = colors.accent,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Not Yet Released",
+                                        color = colors.text,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.titleSmall
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "This content has not been officially released yet. Streaming links may be unavailable or invalid.",
+                                        color = colors.text2,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // 4. Content Overview description
                 item {
                     Column(
@@ -498,6 +613,54 @@ fun DetailScreen(
 
                 // 6. Seasons and Episodes Picker (Series content)
                 if ((mediaType == "tv" || mediaType == "anilist") && episodes.isNotEmpty()) {
+                    if (mediaType == "tv" && detail is TvDetail && (detail as TvDetail).seasons.isNotEmpty()) {
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Text(
+                                    "Seasons",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = colors.text,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    items((detail as TvDetail).seasons.filter { it.seasonNumber > 0 || it.episodeCount > 0 }) { season ->
+                                        val isSelected = viewModel.selectedSeason == season.seasonNumber
+                                        val chipBg = if (isSelected) colors.accent else colors.surface2
+                                        val chipBorderColor = if (isSelected) colors.accent else colors.border
+                                        val chipTextColor = if (isSelected) Color.White else colors.text
+                                        
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(chipBg)
+                                                .border(1.dp, chipBorderColor, RoundedCornerShape(8.dp))
+                                                .clickable {
+                                                    viewModel.selectSeason(mediaId, season.seasonNumber)
+                                                }
+                                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                        ) {
+                                            Text(
+                                                text = season.name.ifEmpty { "Season ${season.seasonNumber}" },
+                                                color = chipTextColor,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     item {
                         Text(
                             "Episodes",
@@ -555,45 +718,237 @@ fun DetailScreen(
                 }
 
                 // Collection items (if present)
-                if (detail is MovieDetail && detail.belongsToCollection != null) {
+                if (detail is MovieDetail && (detail as MovieDetail).belongsToCollection != null) {
                     item {
-                        val col = detail.belongsToCollection
+                        val col = (detail as MovieDetail).belongsToCollection
+                        if (col != null) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    "Part of Collection",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = colors.text,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(colors.surface2, RoundedCornerShape(8.dp))
+                                        .border(1.dp, colors.border, RoundedCornerShape(8.dp))
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AsyncImage(
+                                        model = TmdbApi.imgUrl(col.posterPath, "w185"),
+                                        contentDescription = col.name,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(60.dp, 90.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(colors.surface3)
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Text(
+                                        text = col.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = colors.text,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Cast (Credits) Section
+                val castList = when (detail) {
+                    is MovieDetail -> (detail as MovieDetail).credits?.cast
+                    is TvDetail -> (detail as TvDetail).credits?.cast
+                    else -> null
+                }?.take(12)
+
+                if (!castList.isNullOrEmpty()) {
+                    item {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp)
+                                .padding(vertical = 12.dp)
                         ) {
                             Text(
-                                "Part of Collection",
+                                "Cast & Crew",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = colors.text,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(colors.surface2, RoundedCornerShape(8.dp))
-                                    .border(1.dp, colors.border, RoundedCornerShape(8.dp))
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                AsyncImage(
-                                    model = TmdbApi.imgUrl(col.posterPath, "w185"),
-                                    contentDescription = col.name,
-                                    contentScale = ContentScale.Crop,
+                                items(castList) { cast ->
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.width(80.dp)
+                                    ) {
+                                        AsyncImage(
+                                            model = TmdbApi.imgUrl(cast.profilePath, "w185"),
+                                            contentDescription = cast.name,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(70.dp)
+                                                .clip(CircleShape)
+                                                .background(colors.surface2)
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = cast.name,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = colors.text,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        Text(
+                                            text = cast.character,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = colors.text2,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Reviews Section
+                val reviewsList = when (detail) {
+                    is MovieDetail -> (detail as MovieDetail).reviews?.results
+                    is TvDetail -> (detail as TvDetail).reviews?.results
+                    else -> null
+                }?.take(3)
+
+                if (!reviewsList.isNullOrEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                "User Reviews",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = colors.text,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                            reviewsList.forEach { review ->
+                                Column(
                                     modifier = Modifier
-                                        .size(60.dp, 90.dp)
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(colors.surface3)
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = col.name,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = colors.text,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp)
+                                        .background(colors.surface2, RoundedCornerShape(12.dp))
+                                        .border(1.dp, colors.border, RoundedCornerShape(12.dp))
+                                        .padding(12.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .background(colors.accent.copy(alpha = 0.2f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = review.author.take(1).uppercase(),
+                                                color = colors.accent,
+                                                fontWeight = FontWeight.Bold,
+                                                style = MaterialTheme.typography.titleSmall
+                                            )
+                                        }
+                                        Text(
+                                            text = review.author,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = colors.text,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = review.content,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = colors.text2,
+                                        maxLines = 4,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Recommendations ("More Like This") Section
+                val recs = viewModel.recommendations
+                if (recs.isNotEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp)
+                        ) {
+                            Text(
+                                "More Like This",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = colors.text,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(recs) { item ->
+                                    Column(
+                                        modifier = Modifier
+                                            .width(110.dp)
+                                            .clickable {
+                                                navController.navigate(Routes.detail(item.id, item.mediaType))
+                                            }
+                                    ) {
+                                        AsyncImage(
+                                            model = TmdbApi.imgUrl(item.posterPath, "w342"),
+                                            contentDescription = item.displayTitle,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(110.dp, 160.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(colors.surface2)
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = item.displayTitle,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = colors.text,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
