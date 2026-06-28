@@ -361,22 +361,25 @@ fun TvMediaCard(
     Column(
         modifier = Modifier
             .width(160.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (focused) Color(0xFF1E1E1E) else Color.Transparent)
+            .border(
+                width = if (focused) 2.dp else 0.dp,
+                color = if (focused) Color(0xFFE50914) else Color.Transparent,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .onFocusChanged { focused = it.hasFocus }
+            .focusable()
             .clickable {
                 navController.navigate(Routes.detail(item.id, item.mediaType))
             }
+            .padding(6.dp)
     ) {
         Box(
             modifier = Modifier
-                .width(160.dp)
-                .height(240.dp)
+                .fillMaxWidth()
+                .height(220.dp)
                 .clip(RoundedCornerShape(6.dp))
-                .border(
-                    width = if (focused) 2.dp else 0.dp,
-                    color = if (focused) Color(0xFFE50914) else Color.Transparent,
-                    shape = RoundedCornerShape(6.dp)
-                )
-                .onFocusChanged { focused = it.hasFocus }
-                .focusable()
         ) {
             AsyncImage(
                 model = TmdbApi.imgUrl(item.posterPath, "w342"),

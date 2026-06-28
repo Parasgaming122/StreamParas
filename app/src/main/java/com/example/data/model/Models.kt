@@ -17,7 +17,7 @@ data class MediaItem(
     @Json(name = "genre_ids") val genreIds: List<Int> = emptyList(),
     @Json(name = "original_language") val originalLanguage: String = "",
     @Json(name = "origin_country") val originCountry: List<String> = emptyList(),
-    val mediaType: String = "movie",  // "movie" or "tv"
+    @Json(name = "media_type") val mediaType: String = "movie",  // "movie" or "tv"
     
     // Extended fields (used in history/continue-watching)
     val year: String = "",
