@@ -228,10 +228,11 @@ fun TvSettingsScreen(
             )
 
             // 4. Default Playback Source Row (Interactive Cycle!)
-            val sourcesList = listOf("vidking", "videasy", "vidsrc", "allmanga")
+            val sourcesList = listOf("vidking", "videasy", "videasy_to", "vidsrc", "allmanga")
             val sourceLabels = mapOf(
                 "vidking" to "Vidking Stream",
-                "videasy" to "Videasy Player",
+                "videasy" to "Videasy (.net) Player",
+                "videasy_to" to "Videasy (.to) Player",
                 "vidsrc" to "VidSrc (HLS Native)",
                 "allmanga" to "AllManga Embed"
             )

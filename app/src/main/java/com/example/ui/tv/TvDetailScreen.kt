@@ -43,6 +43,7 @@ import com.example.ui.navigation.Routes
 import com.example.ui.phone.DetailViewModel
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.filled.Info
+import com.example.ui.components.*
 import androidx.compose.ui.text.style.TextAlign
 
 @Composable
@@ -395,7 +396,7 @@ fun TvDetailScreen(
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    items((detail as TvDetail).seasons.filter { it.seasonNumber > 0 || it.episodeCount > 0 }) { season ->
+                                    items((detail as TvDetail).seasons.filter { it.seasonNumber > 0 || it.episodeCount > 0 }, key = { it.seasonNumber }) { season ->
                                         var chipFocused by remember { mutableStateOf(false) }
                                         val isSelected = viewModel.selectedSeason == season.seasonNumber
                                         val chipBg = when {
@@ -442,7 +443,7 @@ fun TvDetailScreen(
                         )
                     }
 
-                    items(episodes) { episode ->
+                    items(episodes, key = { "ep_${it.seasonNumber}_${it.episodeNumber}" }) { episode ->
                         val key = "tv_${mediaId}_s${episode.seasonNumber}_e${episode.episodeNumber}"
                         val isFullyWatched = watchedMap[key] ?: false
 
@@ -508,7 +509,7 @@ fun TvDetailScreen(
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                items(castList) { cast ->
+                                items(castList, key = { it.id }) { cast ->
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         modifier = Modifier.width(90.dp)
@@ -638,7 +639,7 @@ fun TvDetailScreen(
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                items(recs) { item ->
+                                items(recs, key = { item -> item.id }) { item ->
                                     var recFocused by remember { mutableStateOf(false) }
                                     val borderStroke = if (recFocused) 2.dp else 0.dp
                                     val borderColor = if (recFocused) Color(0xFFE50914) else Color.Transparent

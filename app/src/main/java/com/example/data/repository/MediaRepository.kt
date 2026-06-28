@@ -201,4 +201,16 @@ object MediaRepository {
         val saved = Prefs.getSaved(context)
         return saved.containsKey("${mediaType}_$id")
     }
+
+    suspend fun getAnime(): List<MediaItem> {
+        return if (!TmdbApi.hasKey()) emptyList() else TmdbApi.discoverAnime()
+    }
+
+    suspend fun getPunjabiMovies(): List<MediaItem> {
+        return if (!TmdbApi.hasKey()) emptyList() else TmdbApi.discoverPunjabiMovies()
+    }
+
+    suspend fun getIndianMovies(): List<MediaItem> {
+        return if (!TmdbApi.hasKey()) emptyList() else TmdbApi.discoverIndianMovies()
+    }
 }

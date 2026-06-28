@@ -34,6 +34,7 @@ import com.example.data.model.MediaItem
 import com.example.ui.navigation.Routes
 import com.example.ui.phone.HomeViewModel
 import com.example.ui.phone.LibraryViewModel
+import com.example.ui.components.*
 
 private fun com.example.data.model.HistoryEntry.toMediaItem(): MediaItem {
     return MediaItem(
@@ -69,6 +70,9 @@ fun TvHomeScreen(
     val heroMedia by viewModel.heroMedia.collectAsState()
     val trendingMovies by viewModel.trendingMovies.collectAsState()
     val trendingTv by viewModel.trendingTv.collectAsState()
+    val anime by viewModel.anime.collectAsState()
+    val punjabiMovies by viewModel.punjabiMovies.collectAsState()
+    val indianMovies by viewModel.indianMovies.collectAsState()
     
     val continueWatching by libraryViewModel.continueWatching.collectAsState()
     val watchlist by libraryViewModel.watchlist.collectAsState()
@@ -93,10 +97,16 @@ fun TvHomeScreen(
                 .padding(start = 8.dp, top = 16.dp, end = 16.dp)
         ) {
             if (isLoading) {
-                CircularProgressIndicator(
-                    color = Color(0xFFE50914),
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                val brush = shimmerBrush()
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    ShimmerHeroBanner(shimmerBrush = brush)
+                    Spacer(modifier = Modifier.height(24.dp))
+                    ShimmerContentRow(shimmerBrush = brush)
+                }
             } else {
                 Column(
                     modifier = Modifier
@@ -147,6 +157,38 @@ fun TvHomeScreen(
                             items = trendingTv,
                             navController = navController
                         )
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    // Anime Section
+                    if (anime.isNotEmpty()) {
+                        TvContentSection(
+                            title = "Anime Series & Movies",
+                            items = anime,
+                            navController = navController
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    // Punjabi Section
+                    if (punjabiMovies.isNotEmpty()) {
+                        TvContentSection(
+                            title = "Punjabi Hits",
+                            items = punjabiMovies,
+                            navController = navController
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    // Indian Section
+                    if (indianMovies.isNotEmpty()) {
+                        TvContentSection(
+                            title = "Indian Cinema",
+                            items = indianMovies,
+                            navController = navController
+                        )
+                        Spacer(modifier = Modifier.height(32.dp))
+                    } else {
                         Spacer(modifier = Modifier.height(32.dp))
                     }
                 }
@@ -344,7 +386,7 @@ fun TvContentSection(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(items) { item ->
+            items(items, key = { it.id }) { item ->
                 TvMediaCard(item = item, navController = navController)
             }
         }
@@ -361,6 +403,7 @@ fun TvMediaCard(
     Column(
         modifier = Modifier
             .width(160.dp)
+            .scaleOnFocus()
             .clip(RoundedCornerShape(8.dp))
             .background(if (focused) Color(0xFF1E1E1E) else Color.Transparent)
             .border(

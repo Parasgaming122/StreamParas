@@ -25,6 +25,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _recommended = MutableStateFlow<List<MediaItem>>(emptyList())
     val recommended: StateFlow<List<MediaItem>> = _recommended
 
+    private val _anime = MutableStateFlow<List<MediaItem>>(emptyList())
+    val anime: StateFlow<List<MediaItem>> = _anime
+
+    private val _punjabiMovies = MutableStateFlow<List<MediaItem>>(emptyList())
+    val punjabiMovies: StateFlow<List<MediaItem>> = _punjabiMovies
+
+    private val _indianMovies = MutableStateFlow<List<MediaItem>>(emptyList())
+    val indianMovies: StateFlow<List<MediaItem>> = _indianMovies
+
     private val _continueWatching = MutableStateFlow<List<HistoryEntry>>(emptyList())
     val continueWatching: StateFlow<List<HistoryEntry>> = _continueWatching
 
@@ -52,6 +61,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 _topRated.value = MediaRepository.getTopRated()
                 _recommended.value = MediaRepository.getRecommended(getApplication())
                 _continueWatching.value = MediaRepository.getContinueWatching(getApplication())
+                _anime.value = MediaRepository.getAnime()
+                _punjabiMovies.value = MediaRepository.getPunjabiMovies()
+                _indianMovies.value = MediaRepository.getIndianMovies()
 
                 if (movies.isNotEmpty()) {
                     _heroMedia.value = movies.shuffled().firstOrNull() ?: movies.first()

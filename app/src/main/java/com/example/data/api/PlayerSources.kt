@@ -13,7 +13,15 @@ object PlayerSources {
     val sources = listOf(
         com.example.data.model.PlayerSource(
             id = "videasy",
-            label = "Videasy",
+            label = "Videasy (.net)",
+            supportsProgress = true,
+            isAsync = false,
+            colorParam = "color",
+            extraParams = mapOf("overlay" to "true")
+        ),
+        com.example.data.model.PlayerSource(
+            id = "videasy_to",
+            label = "Videasy (.to)",
             supportsProgress = true,
             isAsync = false,
             colorParam = "color",
@@ -71,6 +79,20 @@ object PlayerSources {
                     "https://player.videasy.net/tv/$tmdbId/$season/$episode"
                 } else {
                     "https://player.videasy.net/movie/$tmdbId"
+                }
+                "$base?color=$cleanAccent&overlay=true"
+            }
+            "videasy_to" -> {
+                val base = if (type == "anilist") {
+                    if (episode != null) {
+                        "https://player.videasy.to/anime/$tmdbId/$episode"
+                    } else {
+                        "https://player.videasy.to/anime/$tmdbId"
+                    }
+                } else if (type == "tv" && season != null && episode != null) {
+                    "https://player.videasy.to/tv/$tmdbId/$season/$episode"
+                } else {
+                    "https://player.videasy.to/movie/$tmdbId"
                 }
                 "$base?color=$cleanAccent&overlay=true"
             }

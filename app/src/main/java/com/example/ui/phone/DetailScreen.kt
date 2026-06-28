@@ -47,6 +47,7 @@ import com.example.data.model.*
 import com.example.data.repository.MediaRepository
 import com.example.ui.navigation.Routes
 import com.example.ui.theme.LocalStreambertColors
+import com.example.ui.components.*
 import kotlinx.coroutines.launch
 
 class DetailViewModel(application: Application) : AndroidViewModel(application) {
@@ -632,7 +633,7 @@ fun DetailScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    items((detail as TvDetail).seasons.filter { it.seasonNumber > 0 || it.episodeCount > 0 }) { season ->
+                                    items((detail as TvDetail).seasons.filter { it.seasonNumber > 0 || it.episodeCount > 0 }, key = { it.seasonNumber }) { season ->
                                         val isSelected = viewModel.selectedSeason == season.seasonNumber
                                         val chipBg = if (isSelected) colors.accent else colors.surface2
                                         val chipBorderColor = if (isSelected) colors.accent else colors.border
@@ -643,6 +644,7 @@ fun DetailScreen(
                                                 .clip(RoundedCornerShape(8.dp))
                                                 .background(chipBg)
                                                 .border(1.dp, chipBorderColor, RoundedCornerShape(8.dp))
+                                                .scaleOnPress()
                                                 .clickable {
                                                     viewModel.selectSeason(mediaId, season.seasonNumber)
                                                 }
@@ -671,7 +673,7 @@ fun DetailScreen(
                         )
                     }
 
-                    items(episodes) { episode ->
+                    items(episodes, key = { "ep_${it.seasonNumber}_${it.episodeNumber}" }) { episode ->
                         val key = "tv_${mediaId}_s${episode.seasonNumber}_e${episode.episodeNumber}"
                         val progress = progressMap[key] ?: 0f
                         val isFullyWatched = watchedMap[key] ?: false
@@ -790,7 +792,7 @@ fun DetailScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                items(castList) { cast ->
+                                items(castList, key = { it.id }) { cast ->
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         modifier = Modifier.width(80.dp)
@@ -920,10 +922,11 @@ fun DetailScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                items(recs) { item ->
+                                items(recs, key = { it.id }) { item ->
                                     Column(
                                         modifier = Modifier
                                             .width(110.dp)
+                                            .scaleOnPress()
                                             .clickable {
                                                 navController.navigate(Routes.detail(item.id, item.mediaType))
                                             }

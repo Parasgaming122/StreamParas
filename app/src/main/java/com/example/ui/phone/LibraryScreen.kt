@@ -37,6 +37,7 @@ import com.example.data.model.SavedItem
 import com.example.data.repository.MediaRepository
 import com.example.ui.navigation.Routes
 import com.example.ui.theme.LocalStreambertColors
+import com.example.ui.components.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -183,7 +184,7 @@ fun LibraryScreen(
                     item {
                         SectionHeader(title = "Continue Watching")
                     }
-                    items(continueWatching) { entry ->
+                    items(continueWatching, key = { "cw_${it.id}_${it.mediaType}_${it.season ?: 0}_${it.episode ?: 0}" }) { entry ->
                         HistoryRow(
                             entry = entry,
                             onPlayClick = {
@@ -201,7 +202,7 @@ fun LibraryScreen(
                     item {
                         SectionHeader(title = "Watchlist (${watchlist.size})")
                     }
-                    items(watchlist) { item ->
+                    items(watchlist, key = { "wl_${it.id}" }) { item ->
                         WatchlistRow(
                             item = item,
                             onClick = {
@@ -216,7 +217,7 @@ fun LibraryScreen(
                     item {
                         SectionHeader(title = "Watch History")
                     }
-                    items(history) { entry ->
+                    items(history, key = { "h_${it.id}_${it.mediaType}_${it.season ?: 0}_${it.episode ?: 0}" }) { entry ->
                         HistoryRow(
                             entry = entry,
                             onPlayClick = {
@@ -265,6 +266,7 @@ fun HistoryRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .scaleOnPress()
             .clickable(onClick = onPlayClick)
             .background(colors.surface, RoundedCornerShape(8.dp))
             .border(1.dp, colors.border, RoundedCornerShape(8.dp))
@@ -350,6 +352,7 @@ fun WatchlistRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .scaleOnPress()
             .clickable(onClick = onClick)
             .background(colors.surface, RoundedCornerShape(8.dp))
             .border(1.dp, colors.border, RoundedCornerShape(8.dp))

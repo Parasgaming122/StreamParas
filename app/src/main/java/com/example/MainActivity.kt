@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import com.example.data.local.Prefs
 import com.example.data.repository.MediaRepository
 import com.example.ui.navigation.Routes
@@ -216,7 +218,31 @@ fun PhoneAppNavigation(
         NavHost(
             navController = navController,
             startDestination = Routes.HOME,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                ) + fadeIn(animationSpec = tween(350))
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(350)
+                ) + fadeOut(animationSpec = tween(350))
+            },
+            popEnterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                ) + fadeIn(animationSpec = tween(350))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(350)
+                ) + fadeOut(animationSpec = tween(350))
+            }
         ) {
             composable(Routes.HOME) {
                 HomeScreen(navController = navController)
@@ -298,7 +324,31 @@ fun TvAppNavigation(
     NavHost(
         navController = navController,
         startDestination = Routes.HOME,
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
+        enterTransition = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                animationSpec = tween(350)
+            ) + fadeIn(animationSpec = tween(350))
+        },
+        exitTransition = {
+            slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                animationSpec = tween(350)
+            ) + fadeOut(animationSpec = tween(350))
+        },
+        popEnterTransition = {
+            slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(350)
+            ) + fadeIn(animationSpec = tween(350))
+        },
+        popExitTransition = {
+            slideOutOfContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(350)
+            ) + fadeOut(animationSpec = tween(350))
+        }
     ) {
         composable(Routes.HOME) {
             TvHomeScreen(navController = navController)

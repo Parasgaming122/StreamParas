@@ -127,6 +127,25 @@ interface TmdbService {
         @Header("Authorization") authHeader: String,
         @Query("language") lang: String
     ): TmdbResponse<MediaItem>
+
+    @GET("discover/movie")
+    suspend fun discoverMovies(
+        @Header("Authorization") authHeader: String,
+        @Query("language") lang: String,
+        @Query("with_genres") withGenres: String? = null,
+        @Query("with_original_language") withOriginalLanguage: String? = null,
+        @Query("region") region: String? = null,
+        @Query("sort_by") sortBy: String = "popularity.desc"
+    ): TmdbResponse<MediaItem>
+
+    @GET("discover/tv")
+    suspend fun discoverTv(
+        @Header("Authorization") authHeader: String,
+        @Query("language") lang: String,
+        @Query("with_genres") withGenres: String? = null,
+        @Query("with_original_language") withOriginalLanguage: String? = null,
+        @Query("sort_by") sortBy: String = "popularity.desc"
+    ): TmdbResponse<MediaItem>
 }
 
 object TmdbApi {
@@ -324,6 +343,53 @@ object TmdbApi {
             service.getTopRatedTv(getAuthHeader(), currentLang).results.map {
                 it.copy(mediaType = "tv")
             }.take(8)
+        }
+    }
+
+    suspend fun discoverAnime(): List<MediaItem> {
+        val cacheKey = "discover_anime_$currentLang"
+        return withThrottleAndCache(cacheKey) {
+            val tvList = try {
+                service.discoverTv(getAuthHeader(), currentLang, withGenres = "16", withOriginalLanguage = "ja").results.map {
+                    it.copy(mediaType = "tv")
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+            val movieList = try {
+                service.discoverMovies(getAuthHeader(), currentLang, withGenres = "16", withOriginalLanguage = "ja").results.map {
+                    it.copy(mediaType = "movie")
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+            (tvList + movieList).shuffled().take(12)
+        }
+    }
+
+    suspend fun discoverPunjabiMovies(): List<MediaItem> {
+        val cacheKey = "discover_punjabi_$currentLang"
+        return withThrottleAndCache(cacheKey) {
+            try {
+                service.discoverMovies(getAuthHeader(), currentLang, withOriginalLanguage = "pa").results.map {
+                    it.copy(mediaType = "movie")
+                }.take(12)
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+    }
+
+    suspend fun discoverIndianMovies(): List<MediaItem> {
+        val cacheKey = "discover_indian_$currentLang"
+        return withThrottleAndCache(cacheKey) {
+            try {
+                service.discoverMovies(getAuthHeader(), currentLang, withOriginalLanguage = "hi", region = "IN").results.map {
+                    it.copy(mediaType = "movie")
+                }.take(12)
+            } catch (e: Exception) {
+                emptyList()
+            }
         }
     }
 }
