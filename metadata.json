@@ -1,0 +1,6 @@
+{
+  "name": "Streambert",
+  "description": "Streambert is a personal streaming dashboard with TMDB media details, ExoPlayer, and AniList integrations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
