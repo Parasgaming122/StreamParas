@@ -1,6 +1,7 @@
 package com.example.data.local
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
@@ -260,7 +261,7 @@ object Prefs {
             }
             true
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("Prefs", "Failed to import settings from JSON", e)
             false
         }
     }

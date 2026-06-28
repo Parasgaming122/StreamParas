@@ -267,3 +267,21 @@ data class PlayerSource(
     val langParam: String? = null,
     val extraParams: Map<String, String> = emptyMap()
 )
+
+@JsonClass(generateAdapter = true)
+data class AniListDetail(
+    override val id: Int,
+    val title: String,
+    override val posterPath: String?,
+    override val backdropPath: String?,
+    override val overview: String,
+    val year: String,
+    override val voteAverage: Float,
+    override val genres: List<Genre> = emptyList(),
+    override val originalLanguage: String = "ja",
+    override val originCountry: List<String> = listOf("JP"),
+    override val mediaType: String = "anilist"
+) : DetailCommon {
+    override val displayTitle: String get() = title
+    override val displayYear: String get() = year
+}

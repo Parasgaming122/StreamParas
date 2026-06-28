@@ -117,8 +117,32 @@ object MediaRepository {
     }
 
     suspend fun search(query: String): List<MediaItem> {
-        if (!TmdbApi.hasKey() || query.isBlank()) return emptyList()
-        return TmdbApi.search(query)
+        if (query.isBlank()) return emptyList()
+        val tmdbResults = if (TmdbApi.hasKey()) TmdbApi.search(query) else emptyList()
+        val anilistResults = try {
+            com.example.data.api.AniListApi.searchAnilistMedia(query).map { media ->
+                MediaItem(
+                    id = media.id,
+                    title = media.title?.english ?: media.title?.romaji ?: media.title?.native ?: "Anime",
+                    name = media.title?.english ?: media.title?.romaji ?: media.title?.native ?: "Anime",
+                    posterPath = media.coverImage?.large ?: media.coverImage?.medium ?: media.coverImage?.extraLarge,
+                    backdropPath = media.bannerImage,
+                    overview = com.example.data.api.AniListApi.cleanDescription(media.description),
+                    releaseDate = "${media.seasonYear ?: ""}-01-01",
+                    firstAirDate = "${media.seasonYear ?: ""}-01-01",
+                    voteAverage = (media.averageScore / 10f),
+                    mediaType = "anilist",
+                    year = media.seasonYear?.toString() ?: ""
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        val combined = mutableListOf<MediaItem>()
+        combined.addAll(tmdbResults)
+        combined.addAll(anilistResults)
+        return combined
     }
 
     suspend fun getMovieDetail(id: Int): MovieDetail {

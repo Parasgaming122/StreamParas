@@ -1,6 +1,7 @@
 package com.example.ui.phone
 
 import android.app.Application
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -73,7 +74,7 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 results = MediaRepository.search(newQuery)
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("SearchViewModel", "Search failed for query: $newQuery", e)
             } finally {
                 isLoading = false
             }
@@ -370,12 +371,12 @@ fun SearchResultRow(
 
                 Box(
                     modifier = Modifier
-                        .background(colors.surface3, RoundedCornerShape(4.dp))
+                        .background(if (item.mediaType == "anilist") colors.accent.copy(alpha = 0.2f) else colors.surface3, RoundedCornerShape(4.dp))
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = if (item.isTv) "Series" else "Movie",
-                        color = colors.text2,
+                        text = if (item.mediaType == "anilist") "AniList" else if (item.isTv) "Series" else "Movie",
+                        color = if (item.mediaType == "anilist") colors.accent else colors.text2,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold
                     )

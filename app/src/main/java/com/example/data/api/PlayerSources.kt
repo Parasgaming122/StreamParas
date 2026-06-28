@@ -1,6 +1,7 @@
 package com.example.data.api
 
 import okhttp3.OkHttpClient
+import android.util.Log
 import okhttp3.Request
 import java.net.URLEncoder
 import java.util.regex.Pattern
@@ -60,10 +61,16 @@ object PlayerSources {
         
         return when (sourceId) {
             "videasy" -> {
-                val base = if (type == "tv" && season != null && episode != null) {
-                    "https://player.videasy.to/tv/$tmdbId/$season/$episode"
+                val base = if (type == "anilist") {
+                    if (episode != null) {
+                        "https://player.videasy.net/anime/$tmdbId/$episode"
+                    } else {
+                        "https://player.videasy.net/anime/$tmdbId"
+                    }
+                } else if (type == "tv" && season != null && episode != null) {
+                    "https://player.videasy.net/tv/$tmdbId/$season/$episode"
                 } else {
-                    "https://player.videasy.to/movie/$tmdbId"
+                    "https://player.videasy.net/movie/$tmdbId"
                 }
                 "$base?color=$cleanAccent&overlay=true"
             }
@@ -147,7 +154,7 @@ object PlayerSources {
                     return@withContext "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8"
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("PlayerSources", "Error loading async stream source", e)
                 // Safety demo fallback
                 "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8"
             }

@@ -1,6 +1,7 @@
 package com.example.ui.phone
 
 import android.app.Application
+import android.util.Log
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -71,7 +72,36 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
                 progressMap = com.example.data.local.Prefs.getWatchProgress(getApplication())
                 watchedMap = com.example.data.local.Prefs.getWatched(getApplication())
 
-                if (mediaType == "tv") {
+                if (mediaType == "anilist") {
+                    val animeData = AniListApi.fetchAnilistDataById(mediaId)
+                    if (animeData != null) {
+                        anilistData = animeData
+                        val finalTitle = animeData.title?.english ?: animeData.title?.romaji ?: animeData.title?.native ?: "Anime"
+                        detail = com.example.data.model.AniListDetail(
+                            id = animeData.id,
+                            title = finalTitle,
+                            posterPath = animeData.coverImage?.large ?: animeData.coverImage?.medium ?: animeData.coverImage?.extraLarge,
+                            backdropPath = animeData.bannerImage,
+                            overview = AniListApi.cleanDescription(animeData.description),
+                            year = animeData.seasonYear?.toString() ?: "",
+                            voteAverage = (animeData.averageScore / 10f),
+                            genres = animeData.genres.mapIndexed { idx, name -> Genre(id = idx, name = name) },
+                            mediaType = "anilist"
+                        )
+                        val totalEps = animeData.episodes
+                        val defaultEps = if (totalEps > 0) totalEps else 1
+                        episodes = (1..defaultEps).map { epNum ->
+                            TvEpisode(
+                                id = animeData.id * 1000 + epNum,
+                                seasonNumber = 1,
+                                episodeNumber = epNum,
+                                name = "Episode $epNum",
+                                overview = "Watch Episode $epNum of $finalTitle",
+                                showId = animeData.id
+                            )
+                        }
+                    }
+                } else if (mediaType == "tv") {
                     val tvDetails = MediaRepository.getTvDetail(mediaId)
                     detail = tvDetails
                     
@@ -112,7 +142,7 @@ class DetailViewModel(application: Application) : AndroidViewModel(application) 
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("DetailViewModel", "Failed to load movie details", e)
             } finally {
                 isLoading = false
             }
@@ -335,8 +365,12 @@ fun DetailScreen(
                             onClick = {
                                 // Launch watch source URL
                                 viewModel.viewModelScope.launch {
-                                    val source = com.example.data.local.Prefs.getPlayerSource(context)
-                                        .ifEmpty { PlayerSources.NON_ANIME_DEFAULT }
+                                    val source = if (mediaType == "anilist") {
+                                        "videasy"
+                                    } else {
+                                        com.example.data.local.Prefs.getPlayerSource(context)
+                                            .ifEmpty { PlayerSources.NON_ANIME_DEFAULT }
+                                    }
                                     
                                     val streamUrl = PlayerSources.getSourceUrl(
                                         sourceId = source,
@@ -463,7 +497,7 @@ fun DetailScreen(
                 }
 
                 // 6. Seasons and Episodes Picker (Series content)
-                if (mediaType == "tv" && episodes.isNotEmpty()) {
+                if ((mediaType == "tv" || mediaType == "anilist") && episodes.isNotEmpty()) {
                     item {
                         Text(
                             "Episodes",
@@ -485,12 +519,16 @@ fun DetailScreen(
                             isWatched = isFullyWatched,
                             onClick = {
                                 viewModel.viewModelScope.launch {
-                                    val source = com.example.data.local.Prefs.getPlayerSource(context)
-                                        .ifEmpty { PlayerSources.NON_ANIME_DEFAULT }
+                                    val source = if (mediaType == "anilist") {
+                                        "videasy"
+                                    } else {
+                                        com.example.data.local.Prefs.getPlayerSource(context)
+                                            .ifEmpty { PlayerSources.NON_ANIME_DEFAULT }
+                                    }
                                     
                                     val streamUrl = PlayerSources.getSourceUrl(
                                         sourceId = source,
-                                        type = "tv",
+                                        type = mediaType,
                                         tmdbId = mediaId,
                                         season = episode.seasonNumber,
                                         episode = episode.episodeNumber,
@@ -499,11 +537,11 @@ fun DetailScreen(
                                     navController.navigate(
                                         Routes.playerArgs(
                                             url = streamUrl,
-                                            type = "tv",
+                                            type = mediaType,
                                             tmdbId = mediaId,
                                             season = episode.seasonNumber,
                                             episode = episode.episodeNumber,
-                                            title = "${detail.displayTitle} - S${episode.seasonNumber}E${episode.episodeNumber}"
+                                            title = if (mediaType == "anilist") "${detail.displayTitle} - Episode ${episode.episodeNumber}" else "${detail.displayTitle} - S${episode.seasonNumber}E${episode.episodeNumber}"
                                         )
                                     )
                                 }

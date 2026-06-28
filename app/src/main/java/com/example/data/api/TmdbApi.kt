@@ -175,6 +175,9 @@ object TmdbApi {
 
     fun imgUrl(path: String?, size: String = "w500"): String? {
         if (path.isNullOrEmpty()) return null
+        if (path.startsWith("http://") || path.startsWith("https://")) {
+            return path
+        }
         return "https://image.tmdb.org/t/p/$size$path"
     }
 

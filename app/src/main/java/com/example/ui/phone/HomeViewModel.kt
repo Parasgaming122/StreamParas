@@ -1,6 +1,7 @@
 package com.example.ui.phone
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.model.HistoryEntry
@@ -56,7 +57,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     _heroMedia.value = movies.shuffled().firstOrNull() ?: movies.first()
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("HomeViewModel", "Failed to load home page content", e)
             } finally {
                 _isLoading.value = false
             }

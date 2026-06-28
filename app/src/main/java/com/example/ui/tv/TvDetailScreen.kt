@@ -217,8 +217,12 @@ fun TvDetailScreen(
                             isPrimary = true,
                             onClick = {
                                 coroutineScope.launch {
-                                    val source = com.example.data.local.Prefs.getPlayerSource(context)
-                                        .ifEmpty { PlayerSources.NON_ANIME_DEFAULT }
+                                    val source = if (mediaType == "anilist") {
+                                        "videasy"
+                                    } else {
+                                        com.example.data.local.Prefs.getPlayerSource(context)
+                                            .ifEmpty { PlayerSources.NON_ANIME_DEFAULT }
+                                    }
                                     
                                     val streamUrl = PlayerSources.getSourceUrl(
                                         sourceId = source,
@@ -311,7 +315,7 @@ fun TvDetailScreen(
                 }
 
                 // 6. Episodes (Series only)
-                if (mediaType == "tv" && episodes.isNotEmpty()) {
+                if ((mediaType == "tv" || mediaType == "anilist") && episodes.isNotEmpty()) {
                     item {
                         Text(
                             "Episodes",
@@ -331,12 +335,16 @@ fun TvDetailScreen(
                             isWatched = isFullyWatched,
                             onClick = {
                                 coroutineScope.launch {
-                                    val source = com.example.data.local.Prefs.getPlayerSource(context)
-                                        .ifEmpty { PlayerSources.NON_ANIME_DEFAULT }
+                                    val source = if (mediaType == "anilist") {
+                                        "videasy"
+                                    } else {
+                                        com.example.data.local.Prefs.getPlayerSource(context)
+                                            .ifEmpty { PlayerSources.NON_ANIME_DEFAULT }
+                                    }
                                     
                                     val streamUrl = PlayerSources.getSourceUrl(
                                         sourceId = source,
-                                        type = "tv",
+                                        type = mediaType,
                                         tmdbId = mediaId,
                                         season = episode.seasonNumber,
                                         episode = episode.episodeNumber,
@@ -345,11 +353,11 @@ fun TvDetailScreen(
                                     navController.navigate(
                                         Routes.playerArgs(
                                             url = streamUrl,
-                                            type = "tv",
+                                            type = mediaType,
                                             tmdbId = mediaId,
                                             season = episode.seasonNumber,
                                             episode = episode.episodeNumber,
-                                            title = "${detail.displayTitle} - S${episode.seasonNumber}E${episode.episodeNumber}"
+                                            title = if (mediaType == "anilist") "${detail.displayTitle} - Episode ${episode.episodeNumber}" else "${detail.displayTitle} - S${episode.seasonNumber}E${episode.episodeNumber}"
                                         )
                                     )
                                 }

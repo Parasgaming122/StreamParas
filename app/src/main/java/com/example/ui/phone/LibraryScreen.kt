@@ -1,6 +1,7 @@
 package com.example.ui.phone
 
 import android.app.Application
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -87,7 +88,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
                 _continueWatching.value = contWatching
                 _history.value = generalHistory
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("LibraryViewModel", "Failed to load library data", e)
             }
         }
     }
