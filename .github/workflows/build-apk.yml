@@ -1,0 +1,89 @@
+name: Build and Release APK
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build & Release Android APK
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # No gradle wrapper is committed in this repo, so we specify
+          # a compatible Gradle version directly (AGP 9.1.1 requires 8.12+).
+          gradle-version: "9.3.1"
+
+      - name: Generate Debug Keystore
+        run: |
+          # The app's build.gradle.kts expects the keystore at ${rootDir}/debug.keystore
+          # with alias "androiddebugkey" and password "android".
+          keytool -genkey -v \
+            -keystore debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Create .env File for Secrets Gradle Plugin
+        run: |
+          # The Secrets Gradle Plugin looks for .env and falls back to .env.example.
+          # Create a dummy .env so the plugin doesn't complain about missing files.
+          # API keys (GEMINI_API_KEY, TMDB_KEY) will remain empty — the app
+          # should handle missing keys gracefully at runtime.
+          touch .env
+
+      - name: Build Debug APK
+        run: gradle assembleDebug --no-daemon
+
+      - name: Locate and Select APK
+        id: apk
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" -type f | head -1)
+          if [ -z "$APK_PATH" ]; then
+            echo "Error: APK file not found!"
+            exit 1
+          fi
+          echo "APK found at: $APK_PATH"
+          echo "apk_path=${APK_PATH}" >> $GITHUB_OUTPUT
+
+      - name: Determine Next SemVer Version
+        id: version
+        uses: reecetech/version-increment@2024.4.3
+        with:
+          scheme: semver
+          increment: patch
+
+      - name: Create Release and Upload APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.v-version }}
+          name: Release ${{ steps.version.outputs.v-version }}
+          files: ${{ steps.apk.outputs.apk_path }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

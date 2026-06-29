@@ -1,6 +1,7 @@
 package com.example.ui.phone
 
 import android.app.Application
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,6 +37,7 @@ import com.example.data.model.SavedItem
 import com.example.data.repository.MediaRepository
 import com.example.ui.navigation.Routes
 import com.example.ui.theme.LocalStreambertColors
+import com.example.ui.components.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -87,7 +89,7 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
                 _continueWatching.value = contWatching
                 _history.value = generalHistory
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("LibraryViewModel", "Failed to load library data", e)
             }
         }
     }
@@ -182,7 +184,7 @@ fun LibraryScreen(
                     item {
                         SectionHeader(title = "Continue Watching")
                     }
-                    items(continueWatching) { entry ->
+                    items(continueWatching, key = { "cw_${it.id}_${it.mediaType}_${it.season ?: 0}_${it.episode ?: 0}" }) { entry ->
                         HistoryRow(
                             entry = entry,
                             onPlayClick = {
@@ -200,7 +202,7 @@ fun LibraryScreen(
                     item {
                         SectionHeader(title = "Watchlist (${watchlist.size})")
                     }
-                    items(watchlist) { item ->
+                    items(watchlist, key = { "wl_${it.id}" }) { item ->
                         WatchlistRow(
                             item = item,
                             onClick = {
@@ -215,7 +217,7 @@ fun LibraryScreen(
                     item {
                         SectionHeader(title = "Watch History")
                     }
-                    items(history) { entry ->
+                    items(history, key = { "h_${it.id}_${it.mediaType}_${it.season ?: 0}_${it.episode ?: 0}" }) { entry ->
                         HistoryRow(
                             entry = entry,
                             onPlayClick = {
@@ -264,6 +266,7 @@ fun HistoryRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .scaleOnPress()
             .clickable(onClick = onPlayClick)
             .background(colors.surface, RoundedCornerShape(8.dp))
             .border(1.dp, colors.border, RoundedCornerShape(8.dp))
@@ -349,6 +352,7 @@ fun WatchlistRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .scaleOnPress()
             .clickable(onClick = onClick)
             .background(colors.surface, RoundedCornerShape(8.dp))
             .border(1.dp, colors.border, RoundedCornerShape(8.dp))

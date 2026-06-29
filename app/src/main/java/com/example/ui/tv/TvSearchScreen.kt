@@ -222,7 +222,7 @@ fun TvSearchResultRow(
             ) {
                 Text(item.displayYear, color = Color(0xFF888888), fontSize = 12.sp)
                 Text("★ %.1f".format(item.voteAverage), color = Color(0xFFFFD700), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Text(if (item.isTv) "Series" else "Movie", color = Color(0xFFE50914), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(if (item.mediaType == "anilist") "AniList" else if (item.isTv) "Series" else "Movie", color = Color(0xFFE50914), fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

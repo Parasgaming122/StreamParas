@@ -92,6 +92,32 @@ data class VideoResults(
 )
 
 @JsonClass(generateAdapter = true)
+data class CastMember(
+    val id: Int,
+    val name: String = "",
+    val character: String = "",
+    @Json(name = "profile_path") val profilePath: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class CreditsResponse(
+    val cast: List<CastMember> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class ReviewItem(
+    val id: String,
+    val author: String = "",
+    val content: String = "",
+    @Json(name = "created_at") val createdAt: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class ReviewsResponse(
+    val results: List<ReviewItem> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
 data class MovieDetail(
     override val id: Int,
     val title: String = "",
@@ -111,7 +137,9 @@ data class MovieDetail(
     val budget: Long = 0,
     val revenue: Long = 0,
     @Json(name = "belongs_to_collection") val belongsToCollection: CollectionInfo? = null,
-    val videos: VideoResults? = null
+    val videos: VideoResults? = null,
+    val credits: CreditsResponse? = null,
+    val reviews: ReviewsResponse? = null
 ) : DetailCommon {
     override val displayTitle: String get() = title
     override val displayYear: String get() = (releaseDate ?: "").take(4)
@@ -154,7 +182,9 @@ data class TvDetail(
     override val genres: List<Genre> = emptyList(),
     @Json(name = "original_language") override val originalLanguage: String = "",
     @Json(name = "origin_country") override val originCountry: List<String> = emptyList(),
-    val videos: VideoResults? = null
+    val videos: VideoResults? = null,
+    val credits: CreditsResponse? = null,
+    val reviews: ReviewsResponse? = null
 ) : DetailCommon {
     override val displayTitle: String get() = name
     override val displayYear: String get() = (firstAirDate ?: "").take(4)
@@ -267,3 +297,21 @@ data class PlayerSource(
     val langParam: String? = null,
     val extraParams: Map<String, String> = emptyMap()
 )
+
+@JsonClass(generateAdapter = true)
+data class AniListDetail(
+    override val id: Int,
+    val title: String,
+    override val posterPath: String?,
+    override val backdropPath: String?,
+    override val overview: String,
+    val year: String,
+    override val voteAverage: Float,
+    override val genres: List<Genre> = emptyList(),
+    override val originalLanguage: String = "ja",
+    override val originCountry: List<String> = listOf("JP"),
+    override val mediaType: String = "anilist"
+) : DetailCommon {
+    override val displayTitle: String get() = title
+    override val displayYear: String get() = year
+}

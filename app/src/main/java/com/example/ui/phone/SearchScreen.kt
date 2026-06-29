@@ -1,6 +1,7 @@
 package com.example.ui.phone
 
 import android.app.Application
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -35,9 +36,45 @@ import com.example.data.model.MediaItem
 import com.example.data.repository.MediaRepository
 import com.example.ui.navigation.Routes
 import com.example.ui.theme.LocalStreambertColors
+import com.example.ui.components.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+@Composable
+fun ShimmerSearchResultRow(shimmerBrush: androidx.compose.ui.graphics.Brush) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(45.dp, 65.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(shimmerBrush)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.6f)
+                    .height(16.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(shimmerBrush)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.3f)
+                    .height(12.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(shimmerBrush)
+            )
+        }
+    }
+}
 
 class SearchViewModel(application: Application) : AndroidViewModel(application) {
     var query by mutableStateOf("")
@@ -73,7 +110,7 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 results = MediaRepository.search(newQuery)
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("SearchViewModel", "Search failed for query: $newQuery", e)
             } finally {
                 isLoading = false
             }
@@ -168,12 +205,16 @@ fun SearchScreen(
                 .weight(1f)
         ) {
             if (isLoading) {
-                CircularProgressIndicator(
-                    color = colors.accent,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .testTag("search_loading")
-                )
+                val brush = shimmerBrush()
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(6) {
+                        ShimmerSearchResultRow(shimmerBrush = brush)
+                    }
+                }
             } else if (query.isBlank()) {
                 // Render Recent Search History
                 if (searchHistory.isNotEmpty()) {
@@ -202,10 +243,11 @@ fun SearchScreen(
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(searchHistory) { historyTerm ->
+                            items(searchHistory, key = { it }) { historyTerm ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .scaleOnPress()
                                         .clickable {
                                             viewModel.executeSearch(historyTerm)
                                         }
@@ -293,7 +335,7 @@ fun SearchScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(results) { item ->
+                    items(results, key = { it.id }) { item ->
                         SearchResultRow(
                             item = item,
                             onClick = {
@@ -319,6 +361,7 @@ fun SearchResultRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .scaleOnPress()
             .clickable(onClick = onClick)
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -370,12 +413,12 @@ fun SearchResultRow(
 
                 Box(
                     modifier = Modifier
-                        .background(colors.surface3, RoundedCornerShape(4.dp))
+                        .background(if (item.mediaType == "anilist") colors.accent.copy(alpha = 0.2f) else colors.surface3, RoundedCornerShape(4.dp))
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = if (item.isTv) "Series" else "Movie",
-                        color = colors.text2,
+                        text = if (item.mediaType == "anilist") "AniList" else if (item.isTv) "Series" else "Movie",
+                        color = if (item.mediaType == "anilist") colors.accent else colors.text2,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold
                     )

@@ -31,6 +31,7 @@ import com.example.data.model.HistoryEntry
 import com.example.data.model.MediaItem
 import com.example.ui.navigation.Routes
 import com.example.ui.theme.LocalStreambertColors
+import com.example.ui.components.*
 
 @Composable
 fun HomeScreen(
@@ -45,6 +46,9 @@ fun HomeScreen(
     val topRated by viewModel.topRated.collectAsState()
     val recommended by viewModel.recommended.collectAsState()
     val continueWatching by viewModel.continueWatching.collectAsState()
+    val anime by viewModel.anime.collectAsState()
+    val punjabiMovies by viewModel.punjabiMovies.collectAsState()
+    val indianMovies by viewModel.indianMovies.collectAsState()
 
     val colors = LocalStreambertColors.current
 
@@ -59,14 +63,17 @@ fun HomeScreen(
             .background(colors.bg)
     ) {
         if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+            val brush = shimmerBrush()
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
             ) {
-                CircularProgressIndicator(
-                    color = colors.accent,
-                    modifier = Modifier.testTag("home_loading")
-                )
+                ShimmerHeroBanner(shimmerBrush = brush)
+                Spacer(modifier = Modifier.height(16.dp))
+                ShimmerContentRow(shimmerBrush = brush)
+                Spacer(modifier = Modifier.height(16.dp))
+                ShimmerContentRow(shimmerBrush = brush)
             }
         } else {
             Column(
@@ -127,6 +134,38 @@ fun HomeScreen(
                         items = topRated,
                         navController = navController
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // 7. Anime Section
+                if (anime.isNotEmpty()) {
+                    ContentSection(
+                        title = "Anime Series & Movies",
+                        items = anime,
+                        navController = navController
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // 8. Punjabi Section
+                if (punjabiMovies.isNotEmpty()) {
+                    ContentSection(
+                        title = "Punjabi Hits",
+                        items = punjabiMovies,
+                        navController = navController
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // 9. Indian Section
+                if (indianMovies.isNotEmpty()) {
+                    ContentSection(
+                        title = "Indian Cinema",
+                        items = indianMovies,
+                        navController = navController
+                    )
+                    Spacer(modifier = Modifier.height(80.dp)) // padding for bottom bar
+                } else {
                     Spacer(modifier = Modifier.height(80.dp)) // padding for bottom bar
                 }
             }
@@ -302,7 +341,7 @@ fun ContentSection(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(items) { item ->
+            items(items, key = { it.id }) { item ->
                 MediaCard(item = item, navController = navController)
             }
         }
@@ -321,6 +360,7 @@ fun MediaCard(
     Column(
         modifier = Modifier
             .width(130.dp)
+            .scaleOnPress()
             .clickable {
                 navController.navigate(Routes.detail(item.id, item.mediaType))
             }
@@ -431,7 +471,7 @@ fun ContinueWatchingSection(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(items) { entry ->
+            items(items, key = { it.id }) { entry ->
                 ContinueWatchingCard(entry = entry, navController = navController)
             }
         }
@@ -449,6 +489,7 @@ fun ContinueWatchingCard(
     Column(
         modifier = Modifier
             .width(130.dp)
+            .scaleOnPress()
             .clickable {
                 navController.navigate(Routes.detail(entry.id, entry.mediaType))
             }

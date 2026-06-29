@@ -1,6 +1,7 @@
 package com.example.ui.tv
 
 import android.annotation.SuppressLint
+import android.util.Log
 import android.view.KeyEvent
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
@@ -77,7 +78,7 @@ fun TvPlayerScreen(
                 )
                 MediaRepository.addHistoryEntry(context, entry)
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("TvPlayerScreen", "Failed to save history or watched status", e)
             } finally {
                 navController.popBackStack()
             }
@@ -131,6 +132,10 @@ fun TvPlayerScreen(
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.mediaPlaybackRequiresUserGesture = false
+                    settings.allowFileAccess = true
+                    settings.allowContentAccess = true
+                    settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                     webViewClient = WebViewClient()
                     webChromeClient = WebChromeClient()
                     layoutParams = ViewGroup.LayoutParams(

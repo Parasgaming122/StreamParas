@@ -1,6 +1,7 @@
 package com.example.data.api
 
 import com.example.data.model.*
+import android.util.Log
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
@@ -109,8 +110,158 @@ object AniListApi {
                     media
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("AniListApi", "Failed to fetch AniList data", e)
                 null
+            }
+        }
+    }
+
+    suspend fun fetchAnilistDataById(id: Int): AniListMedia? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val query = """
+                    query (${'$'}id: Int) {
+                      Media(id: ${'$'}id) {
+                        id
+                        idMal
+                        title {
+                          romaji
+                          english
+                          native
+                        }
+                        description
+                        coverImage {
+                          extraLarge
+                          large
+                          medium
+                        }
+                        bannerImage
+                        genres
+                        averageScore
+                        episodes
+                        status
+                        season
+                        seasonYear
+                        relations {
+                          edges {
+                            relationType
+                            node {
+                              id
+                              idMal
+                              title {
+                                romaji
+                                english
+                              }
+                              coverImage {
+                                medium
+                              }
+                              seasonYear
+                            }
+                          }
+                        }
+                      }
+                    }
+                """.trimIndent()
+
+                val variables = JSONObject().put("id", id)
+                val jsonBody = JSONObject()
+                    .put("query", query)
+                    .put("variables", variables)
+
+                val requestBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
+                val request = Request.Builder()
+                    .url("https://graphql.anilist.co")
+                    .post(requestBody)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@withContext null
+                    val jsonStr = response.body?.string() ?: return@withContext null
+                    
+                    val root = JSONObject(jsonStr)
+                    val dataObj = root.optJSONObject("data") ?: return@withContext null
+                    val mediaObj = dataObj.optJSONObject("Media") ?: return@withContext null
+                    
+                    val media = mediaAdapter.fromJson(mediaObj.toString())
+                    media
+                }
+            } catch (e: Exception) {
+                Log.e("AniListApi", "Failed to fetch AniList data by ID", e)
+                null
+            }
+        }
+    }
+
+    suspend fun searchAnilistMedia(queryStr: String): List<AniListMedia> {
+        if (queryStr.isBlank()) return emptyList()
+        return withContext(Dispatchers.IO) {
+            try {
+                val query = """
+                    query (${'$'}search: String) {
+                      Page(page: 1, perPage: 10) {
+                        media(search: ${'$'}search, type: ANIME) {
+                          id
+                          idMal
+                          title {
+                            romaji
+                            english
+                            native
+                          }
+                          description
+                          coverImage {
+                            extraLarge
+                            large
+                            medium
+                          }
+                          bannerImage
+                          genres
+                          averageScore
+                          episodes
+                          status
+                          season
+                          seasonYear
+                        }
+                      }
+                    }
+                """.trimIndent()
+
+                val variables = JSONObject().put("search", queryStr)
+                val jsonBody = JSONObject()
+                    .put("query", query)
+                    .put("variables", variables)
+
+                val requestBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
+                val request = Request.Builder()
+                    .url("https://graphql.anilist.co")
+                    .post(requestBody)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@withContext emptyList()
+                    val jsonStr = response.body?.string() ?: return@withContext emptyList()
+                    
+                    val root = JSONObject(jsonStr)
+                    val dataObj = root.optJSONObject("data") ?: return@withContext emptyList()
+                    val pageObj = dataObj.optJSONObject("Page") ?: return@withContext emptyList()
+                    val mediaArray = pageObj.optJSONArray("media") ?: return@withContext emptyList()
+                    
+                    val results = mutableListOf<AniListMedia>()
+                    for (i in 0 until mediaArray.length()) {
+                        try {
+                            val mediaJson = mediaArray.getJSONObject(i).toString()
+                            val media = mediaAdapter.fromJson(mediaJson)
+                            if (media != null) {
+                                results.add(media)
+                            }
+                        } catch (e: Exception) {
+                            Log.e("AniListApi", "Failed to parse individual media", e)
+                        }
+                    }
+                    results
+                }
+            } catch (e: Exception) {
+                Log.e("AniListApi", "Failed to search AniList media", e)
+                emptyList()
             }
         }
     }
