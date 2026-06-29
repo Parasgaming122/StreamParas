@@ -31,7 +31,7 @@ jobs:
         with:
           # No gradle wrapper is committed in this repo, so we specify
           # a compatible Gradle version directly (AGP 9.1.1 requires 8.12+).
-          gradle-version: "8.12.1"
+          gradle-version: "9.3.1"
 
       - name: Generate Debug Keystore
         run: |
